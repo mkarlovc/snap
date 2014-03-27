@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <None Include="artificial_intelligence.txt" />
+    <None Include="artificial_intelligence_cat.txt" />
+    <None Include="artificial_intelligence_cat_pub.txt" />
+    <None Include="artificial_intelligence_pub.txt" />
+    <None Include="sciences.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="diversity.cpp" />
+    <ClCompile Include="..\..\snap-core\Snap.cpp" />
+    <ClCompile Include="stdafx.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\snap-core\Snap.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="targetver.h" />
+  </ItemGroup>
+</Project>
