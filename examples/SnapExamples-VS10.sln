@@ -51,6 +51,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cesna", "cesna\cesna.vcxpro
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "diversity", "diversity\diversity.vcxproj", "{43EF451D-9C0B-4B82-8C31-BB8C9D7B2F65}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gcentrality", "gcentrality\gcentrality.vcxproj", "{4CE5656E-CF45-463E-85FD-1504280301C5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -188,6 +190,12 @@ Global
 		{43EF451D-9C0B-4B82-8C31-BB8C9D7B2F65}.Release|Win32.ActiveCfg = Release|Win32
 		{43EF451D-9C0B-4B82-8C31-BB8C9D7B2F65}.Release|Win32.Build.0 = Release|Win32
 		{43EF451D-9C0B-4B82-8C31-BB8C9D7B2F65}.Release|x64.ActiveCfg = Release|Win32
+		{4CE5656E-CF45-463E-85FD-1504280301C5}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4CE5656E-CF45-463E-85FD-1504280301C5}.Debug|Win32.Build.0 = Debug|Win32
+		{4CE5656E-CF45-463E-85FD-1504280301C5}.Debug|x64.ActiveCfg = Debug|Win32
+		{4CE5656E-CF45-463E-85FD-1504280301C5}.Release|Win32.ActiveCfg = Release|Win32
+		{4CE5656E-CF45-463E-85FD-1504280301C5}.Release|Win32.Build.0 = Release|Win32
+		{4CE5656E-CF45-463E-85FD-1504280301C5}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
