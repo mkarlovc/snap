@@ -7,13 +7,10 @@ Eiji Miyano, Hirotaka Ono, Maximum Domination Problem, CATS 2011: 55-62
 
 /////////////////////////////////////////////////////////////////////////////
 Parameters:
-   -o:Output graph file name (default:'graph.txt')
-   -n:Number of nodes (size of the generated graph) (default:10000)
-   -f:Forward burning probability (default:0.35)
-   -b:Backward burning probability (default:0.32)
-   -s:Start graph with S isolated nodes (default:1)
-   -a:Probability of a new node choosing 2 ambassadors (default:0)
-   -op:Probability of a new node being an orphan (node with zero out-degree) (default:0)
+   -g:input graph (default:'../gcentrality/cobiss.txt')
+   -o:Output graph file name (default:'gc.test.tab')
+   -k:size of the group(default:10)
+   -c:input group nodes list
 
 /////////////////////////////////////////////////////////////////////////////
 Data:

@@ -7,7 +7,7 @@ int main(int argc, char* argv[]) {
   double tm1, tm2;
   Try
   const TStr InFNm = Env.GetIfArgPrefixStr("-g:", "../gcentrality/cobiss.txt", "Input un/directed graph");
-  const TStr OutFNm = Env.GetIfArgPrefixStr("-o:", "gc.testtab", "Output file");
+  const TStr OutFNm = Env.GetIfArgPrefixStr("-o:", "gc.test.tab", "Output file");
   const TStr InGFNm = Env.GetIfArgPrefixStr("-c:", "../gcentrality/gc2.txt", "Input group nodes");
   const TStr K = Env.GetIfArgPrefixStr("-k:", "10", "k size");
   
