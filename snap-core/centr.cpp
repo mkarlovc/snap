@@ -296,32 +296,6 @@ double GetGroupClosenessCentr(const PUNGraph& Graph, const TIntH& GroupNodes) {
   else { return 0.0; }
 }
 
-TIntH MaxCPGreedy(const PUNGraph& Graph, const int k) {
-  TIntH GroupNodes;
-  double gc=0, gc0=0, addId, gcFinal;
-  GetGroupDegreeCentr(Graph, GroupNodes);
-
-  int br=0;
-  while (br<k){
-	  for (TUNGraph::TNodeI NI = Graph->BegNI(); NI < Graph->EndNI(); NI++) {
-		  GroupNodes.AddDat(br,NI.GetId());
-		  gc = GetGroupDegreeCentr(Graph, GroupNodes);
-		  if (gc>gc0){
-			gc0 = gc;
-			addId = NI.GetId();
-		  }
-		  GroupNodes.DelKey(br);
-	  }
-	  GroupNodes.AddDat(br,addId);
-	  br++;
-	  gcFinal = gc0;
-	  gc0=0;
-  }
-
-  return GroupNodes;
-}
-
-
 TIntH MaxCPGreedyBetter(const PUNGraph& Graph, const int k) {
   TIntH GroupNodes; // buildup cpntainer of group nodes
   TIntH NNodes; // container of neighbouring nodes
@@ -371,17 +345,19 @@ TIntH MaxCPGreedyBetter(const PUNGraph& Graph, const int k) {
   return GroupNodes;
 }
 
+// this is the variation of the first version that doesent stop after finding the optimal K
 TIntH MaxCPGreedyBetter1(const PUNGraph& Graph, const int k) {
-  TIntH GroupNodes; // buildup cpntainer of group nodes
-  TIntH NNodes; // container of neighbouring nodes
-  TIntH Nodes; // nodes sorted by vd
+  TIntH GroupNodes;
+  TIntH NNodes;
+  TIntH Nodes;
   double gc=0, gc0=0, addId, addIdPrev=0, gcFinal;
   
+  // put nodes in the container and sort them by vertex degree
   for (TUNGraph::TNodeI NI = Graph->BegNI(); NI < Graph->EndNI(); NI++){
 	  Nodes.AddDat(NI.GetId(),NI.GetDeg());
   }
-
   Nodes.SortByDat(false);
+
 
   int br=0;
   while (br < k) {
@@ -418,6 +394,7 @@ TIntH MaxCPGreedyBetter1(const PUNGraph& Graph, const int k) {
   return GroupNodes;
 }
 
+// version with string type of container of group nodes - Fail (it is slower)
 TIntH MaxCPGreedyBetter2(const PUNGraph& Graph, const int k) {
   TIntH GroupNodes; // buildup cpntainer of group nodes
   TStr NNodes; // container of neighbouring nodes
@@ -477,6 +454,7 @@ TIntH MaxCPGreedyBetter2(const PUNGraph& Graph, const int k) {
   return GroupNodes;
 }
 
+// version with int array - the fastest
 TIntH MaxCPGreedyBetter3(const PUNGraph& Graph, const int k) {
   TIntH GroupNodes; // buildup cpntainer of group nodes
   const int n = Graph->GetNodes();

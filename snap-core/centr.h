@@ -15,8 +15,6 @@ double GetGroupDegreeCentr(const PUNGraph& Graph, const TIntH& GroupNodes);
 //double GetGroupDegreeCentr(const PUNGraph& Graph, const PUNGraph& Group);
 double GetGroupClosenessCentr(const PUNGraph& Graph, const TIntH& GroupNodes);
 /// Returns centrality Maximum k group.
-TIntH MaxCPGreedy(const PUNGraph& Graph, const int k);
-/// Returns centrality Maximum k group.
 TIntH MaxCPGreedyBetter(const PUNGraph& Graph, const int k);
 /// Returns centrality Maximum k group.
 TIntH MaxCPGreedyBetter1(const PUNGraph& Graph, const int k);
