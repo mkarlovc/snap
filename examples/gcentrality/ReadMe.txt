@@ -23,6 +23,6 @@ Data:
 /////////////////////////////////////////////////////////////////////////////
 Usage:
 
-Determine group that has maximum group degree centrality using approximate greedy algorithm
+Determine group that has maximum group degree centrality using approximative greedy algorithm
 
 gcentrality.exe -g:../gcentrality/cobiss.txt -o:gc.test.tab -k:10
