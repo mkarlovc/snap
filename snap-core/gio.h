@@ -6,6 +6,8 @@ namespace TSnap {
 template <class PGraph> PGraph LoadEdgeList(const TStr& InFNm, const int& SrcColId=0, const int& DstColId=1);
 /// Loads a (directed, undirected or multi) graph from a text file InFNm with 1 edge per line ('Separator' separated columns, integer node ids).
 template <class PGraph> PGraph LoadEdgeList(const TStr& InFNm, const int& SrcColId, const int& DstColId, const char& Separator);
+/// Loads a (directed, undirected or multi) graph from a text file InFNm with 1 edge per line ('Separator' separated columns, integer node ids) with list of group nodes making the group supervertex.
+template <class PGraph> PGraph LoadEdgeList(const TStr& InFNm, const TStr& InFNm1,  const int& SrcColId=0, const int& DstColId=1);
 /// Loads a (directed, undirected or multi) graph from a text file InFNm with 1 edge per line (whitespace separated columns, arbitrary string node ids).
 template <class PGraph> PGraph LoadEdgeListStr(const TStr& InFNm, const int& SrcColId=0, const int& DstColId=1);
 /// Loads a (directed, undirected or multi) graph from a text file InFNm with 1 edge per line (whitespace separated columns, arbitrary string node ids).
@@ -14,6 +16,9 @@ template <class PGraph> PGraph LoadEdgeListStr(const TStr& InFNm, const int& Src
 template <class PGraph> PGraph LoadConnList(const TStr& InFNm);
 /// Loads a (directed, undirected or multi) graph from a text file InFNm with 1 node and all its edges in a single line.
 template <class PGraph> PGraph LoadConnListStr(const TStr& InFNm, TStrHash<TInt>& StrToNIdH);
+/// Just a check
+bool IsinGroup(int *GNodes, int node);
+
 
 /// Loads a (directed, undirected or multi) graph from Pajek .PAJ format file. ##LoadPajek
 template <class PGraph> PGraph LoadPajek(const TStr& InFNm);
@@ -64,6 +69,48 @@ PGraph LoadEdgeList(const TStr& InFNm, const int& SrcColId, const int& DstColId)
     Graph->AddEdge(SrcNId, DstNId);
   }
   Graph->Defrag();
+  return Graph;
+}
+
+/// Loads the format saved by TSnap::SaveEdgeList() ##LoadEdgeList with group nodes
+template <class PGraph>
+PGraph LoadEdgeList(const TStr& InFNm, const TStr& InFNm1, const int& SrcColId, const int& DstColId) {
+  TSsParser Ss(InFNm, ssfWhiteSep, true, true, true);
+  TSsParser SsG(InFNm1, ssfWhiteSep, true, true, true);
+  TSsParser SsG1(InFNm1, ssfWhiteSep, true, true, true);
+  
+  int br = 0;
+  int SrcNId, DstNId;
+  while (SsG.Next()) {
+    if (! SsG.GetInt(SrcColId, SrcNId)) { continue; }
+    br++;
+  }
+
+  const int n = br;
+  int *GNodes = new int[n];
+  br = 0;
+
+  int NodeId;
+  
+  while (SsG1.Next()) {
+    if (! SsG1.GetInt(0, NodeId)) { continue; }
+	GNodes[br] = NodeId;
+	br++;
+  }
+
+  PGraph Graph = PGraph::TObj::New();
+
+  while (Ss.Next()) {
+    if (! Ss.GetInt(SrcColId, SrcNId) || ! Ss.GetInt(DstColId, DstNId)) { continue; }
+	if (IsinGroup(GNodes,SrcNId)) { SrcNId = 0;}
+	if (IsinGroup(GNodes,DstNId)) { DstNId = 0;}
+    if (! Graph->IsNode(SrcNId)) { Graph->AddNode(SrcNId); }
+    if (! Graph->IsNode(DstNId)) { Graph->AddNode(DstNId); }
+    Graph->AddEdge(SrcNId, DstNId);
+  }
+  Graph->Defrag();
+
+  delete GNodes;
   return Graph;
 }
 

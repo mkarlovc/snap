@@ -5,9 +5,9 @@ int main(int argc, char* argv[]) {
   Env.PrepArgs(TStr::Fmt("Connected components. build: %s, %s. Time: %s", __TIME__, __DATE__, TExeTm::GetCurTm()));
   TExeTm ExeTm;
   Try
-  const TStr InFNm = Env.GetIfArgPrefixStr("-i:", "as20graph.txt", "Input file");
+  const TStr InFNm = Env.GetIfArgPrefixStr("-i:", "C:\\Users\\mario\\Desktop\\graph1914.txt", "Input file");
   const TStr OutFNm = Env.GetIfArgPrefixStr("-o:", "graph", "Output file prefix");
-  if (Env.IsEndOfRun()) { return 0; }
+  //if (Env.IsEndOfRun()) { return 0; }
   TExeTm ExeTm;
   PNGraph Graph;
   printf("Loading...\n");

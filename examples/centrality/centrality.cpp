@@ -5,7 +5,7 @@ int main(int argc, char* argv[]) {
   Env.PrepArgs(TStr::Fmt("Node Centrality. build: %s, %s. Time: %s", __TIME__, __DATE__, TExeTm::GetCurTm()));
   TExeTm ExeTm;
   Try
-  const TStr InFNm = Env.GetIfArgPrefixStr("-i:", "../as20graph.txt", "Input un/directed graph");
+  const TStr InFNm = Env.GetIfArgPrefixStr("-i:", "../events.txt", "Input un/directed graph");
   const TStr OutFNm = Env.GetIfArgPrefixStr("-o:", "node_centrality.tab", "Output file");
   printf("Loading %s...", InFNm.CStr());
   PNGraph Graph = TSnap::LoadEdgeList<PNGraph>(InFNm);

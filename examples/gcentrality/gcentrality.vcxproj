@@ -78,6 +78,7 @@
     <None Include="cobiss.txt" />
     <None Include="cobiss1.txt" />
     <None Include="gc2.txt" />
+    <None Include="ReadMe.txt" />
     <None Include="sicris.txt" />
   </ItemGroup>
   <ItemGroup>

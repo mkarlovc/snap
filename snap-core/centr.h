@@ -22,6 +22,8 @@ TIntH MaxCPGreedyBetter1(const PUNGraph& Graph, const int k);
 TIntH MaxCPGreedyBetter2(const PUNGraph& Graph, const int k);
 /// Returns centrality Maximum k group.
 TIntH MaxCPGreedyBetter3(const PUNGraph& Graph, const int k);
+/// Event importance
+TIntFltH EventImportance(const PNGraph& Graph, const int k);
 /// Intersect
 int Intersect(TUNGraph::TNodeI Node, TIntH NNodes);
 /// Intersect

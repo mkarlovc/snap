@@ -185,6 +185,693 @@ double Infomap(PUNGraph& Graph, TCnComV& CmtyV){
   return MinCodeLength;
 }
 
+void CmtyEvolutionFolderBatch(TStr InFNm, TIntIntHH& sizesCont, TIntIntHH& cCont, TIntIntVH& edges, double alpha, double beta, int CmtyAlg) {
+
+  // getting all the files with the extension .edg in the input folder
+  HANDLE hFind;
+  WIN32_FIND_DATA data;
+  char * folder = new char[strlen(InFNm.CStr())+strlen("*.edg")];
+  sprintf(folder,"%s%s",InFNm.CStr(),"*.edg");
+  hFind = FindFirstFile(folder, &data);
+
+
+  // reading folder with networks and calculating core/periphery
+  if (hFind != INVALID_HANDLE_VALUE) {
+    
+	// counter is used for counting time points (e.g year)
+	int br=0;
+
+	// container of communities
+	TIntIntH prev;
+
+	// temporal container for sizes of communities in t-1 timepoint 
+	TIntH prev_sizes;
+
+	// temporal container for edges
+	TIntIntVH edges_;
+
+	// iterate all the files
+    do {
+	  // working with the file
+      printf("%s\n", data.cFileName);
+
+	  // WORK
+	  
+	  // creating path to the file - connecting path with the file name
+	  char * newfile = new char[strlen(InFNm.CStr())+strlen(data.cFileName)];
+	  sprintf(newfile,"%s%s",InFNm.CStr(),data.cFileName);
+
+	  // loading graph from the file
+	  PUNGraph Graph = TSnap::LoadEdgeList<PUNGraph>(newfile, false);
+
+	  // remove self edges from the graph
+	  TSnap::DelSelfEdges(Graph);
+
+	  // creating temporal (for the curent file/year/time_point) container for communities - generic for all community detection algorithms in Snap
+      TCnComV CmtyV;
+
+	  // modularity measure
+      double Q = 0.0;
+      
+	  // for community detection algorithm name
+	  TStr CmtyAlgStr;
+	  
+	  // depending on the input parameter, choose commnity detection algorithm, compute communities and store it into CmtyV container
+      if (CmtyAlg == 1) {
+        CmtyAlgStr = "Girvan-Newman";
+        Q = TSnap::CommunityGirvanNewman(Graph, CmtyV); }
+      else if (CmtyAlg == 2) {
+        CmtyAlgStr = "Clauset-Newman-Moore";
+        Q = TSnap::CommunityCNM(Graph, CmtyV); }
+      else if (CmtyAlg == 3) {
+        CmtyAlgStr = "Infomap";
+        Q = TSnap::Infomap(Graph, CmtyV); }
+      else { Fail; }
+
+	  // temporal (current file/year/time_point) container for distribution of communities from previous time point in the current community
+	  TIntIntHH distCont;
+
+	  // if it is the first time point, store the communities and their sizes as they are
+	  if (br == 0) {
+	    prev.Clr();
+		int size = 0;
+		for (int c = 0; c < CmtyV.Len(); c++) {
+          for (int i = 0; i < CmtyV[c].Len(); i++)
+		    prev.AddDat(CmtyV[c][i].Val,c);	
+		  int s = CmtyV[c].Len();
+		  prev_sizes.AddDat(c,CmtyV[c].Len());
+        }
+	  }
+
+	  // othervise check the distributions of communities from previous time points (statH1 and statH2 statistics) for labeling
+	  else {
+		
+		// container for distributions of comunities from t-1 in the current communities
+		TIntH dist;
+		// container for maping of labels in relation to communities from previous time point
+		TIntH map;
+
+		// determining first free id for a new community - first_new_c_id
+		int first_new_c_id=-1;
+		for (THashKeyDatI<TInt, TInt> it = prev_sizes.BegI();  !it.IsEnd(); it++)
+		  if (it.GetKey() > first_new_c_id)
+		    first_new_c_id = it.GetKey();
+		
+		if (CmtyV.Len()-1>first_new_c_id)
+		  first_new_c_id = CmtyV.Len()-1;
+		
+		first_new_c_id++;
+
+		
+		// iterate for all the communities in the current time point
+	    for (int c = 0; c < CmtyV.Len(); c++) {
+		 
+		  TIntV stat;
+		  TIntFltH statH1;
+		  TIntFltH statH2;
+		  
+		  // initialize distributions to 0
+		  for (THashKeyDatI<TInt, TInt> it = prev_sizes.BegI();  !it.IsEnd(); it++)
+			  dist.AddDat(it.GetKey(),0);
+		  
+		  // add size 0 for new nodes which are assigned to community -1
+		  dist.AddDat(-1,0);
+
+		  // iterate for all individuals in community c (at the current time point br)
+		  int id, prev_comm, pre_val;
+          for (int i = 0; i < CmtyV[c].Len(); i++) {
+			  // community of the individual
+			  id = CmtyV[c][i].Val;
+			  
+			  // assume it is a new individual, not existing in t-1
+			  prev_comm=-1;
+
+			  // check if the individual existed in t-1. in case it did get the community of it in t-1 (prev_comm container - (id_of_individual,community_id_in_t-1)) 
+			  if (prev.IsKey(id))
+				prev_comm = prev.GetDat(CmtyV[c][i].Val);
+
+			  // add the t-1 community of the individual to stat
+			  stat.Add(prev_comm);
+
+			  // increase count for the t-1 community in dist container (comm_from_t-1, freq_of_t-1_comm_in_t)
+			  pre_val = dist.GetDat(prev_comm);
+			  dist.AddDat(prev_comm,pre_val+1);
+          }
+
+		  // sum of distributions of communities from t-1 in t - should (finally) sum to 1
+		  double sumstat2=0;
+
+		  // iterate all communities from t-1 that are in the current community in t
+		  int k, d;
+		  for (THashKeyDatI<TInt, TInt> it = dist.BegI();  !it.IsEnd(); it++) {
+			  
+			  // id of t-1 community
+			  k = it.GetKey();
+			  
+			  // size of t-1 community (at t)
+			  d = it.GetDat();
+
+			  // if the current community contains community k
+			  if (d > 0){
+
+				  // if k has size recorded in t-1
+				  if (prev_sizes.IsKey(k)){
+					// d - size of k in t, prev_sizes.GetDat(k) - size of k in t-1
+					double stat1_ = (double)d/(double)prev_sizes.GetDat(k);
+					
+					// stat1_ is percentage of k that went from t-1 to the current community
+					statH1.AddDat(k, stat1_);
+				  }
+
+				  // stat2_ is the ratio that k has in the current community
+				  double stat2_ = (double)d/(double)CmtyV[c].Len();
+				  statH2.AddDat(k, stat2_);
+				  sumstat2 += stat2_;
+
+				  // edges
+				  TIntV edge;
+				  // storing edges temporaly for t. after the labeling is done (mapping) the node of the edge is renamed and added to the global edge container
+				  edge.Add(k); edge.Add(c); edge.Add(d); edge.Add(br-1); edge.Add(br);
+				  edges_.AddDat(edges_.Len()+1,edge);
+			  }
+
+			  // if almost 100% of content in the current community is inspected the iteration can stop
+			  if (sumstat2 > 0.98) break;
+		  }
+
+		  // analyse the statistics
+		  int n_of_c_greater_than_half=0;
+		  int id_of_c_greater_than_half=-1;
+		  TIntV ids_of_c_greater_than_half;
+		  
+		  // count how many communities has statH1 > alpha (e.g. 0.5) and store those communities
+		  for (THashKeyDatI<TInt, TFlt> it = statH1.BegI();  !it.IsEnd(); it++){
+			  if (it.GetDat()>alpha){
+				id_of_c_greater_than_half = it.GetKey();
+				ids_of_c_greater_than_half.Add(it.GetKey());
+				n_of_c_greater_than_half++;
+			  }
+		  }
+		  
+		  // if this community is build of majority of one previous community and the other parts of the community are fractions of other communities smaller than half, the new community gets the label of the community in majority 
+		  if (n_of_c_greater_than_half == 1){
+			  map.AddDat(c, id_of_c_greater_than_half);
+		  }
+		  // if there are more communities with major parts from t-1
+		  else{
+		    int h2part_id = -2;
+			// iterate those communities
+			for (int i=0; i<ids_of_c_greater_than_half.Len(); i++){
+			  double H2 = statH2.GetDat(ids_of_c_greater_than_half[i]);
+		      // if some of such communites has major part (>beta, e.g. 60%) of the current community, it gets its name
+			  if (H2>beta){
+			    h2part_id = ids_of_c_greater_than_half[i];
+		      }
+			}
+			// naming by the choosen 'major' community
+			if (h2part_id!=-2)
+			  map.AddDat(c, h2part_id);
+			// no condition for transfering the community label was meet, so the community get a new label
+			else{
+			  map.AddDat(c,first_new_c_id);
+			  first_new_c_id++;
+			}
+		  }
+
+		  // dist - V[(community_id_in_t-1, size)]
+		  // distcont - V[(community_id_in_t, dist)]
+		  distCont.AddDat(c,dist);
+		 
+		 }
+
+        // save the sizes of the community with resolved labeling - used in t+1
+		prev.Clr();
+		prev_sizes.Clr();
+		for (int c = 0; c < CmtyV.Len(); c++){
+            for (int i = 0; i < CmtyV[c].Len(); i++){
+				prev.AddDat(CmtyV[c][i].Val,map.GetDat(c));
+			}
+			int s = CmtyV[c].Len();
+			prev_sizes.AddDat(map.GetDat(c),CmtyV[c].Len());
+		}
+
+		// filing the edges container - the key thing is the map(c)
+		for (THashKeyDatI<TInt, TIntV> it = edges_.BegI();  !it.IsEnd(); it++){
+		  TIntV edgesV;
+		  edgesV.Add(map.GetDat(it.GetDat()[1]));
+		  edgesV.Add(it.GetDat()[0]);
+		  edgesV.Add(it.GetDat()[2]);
+		  edgesV.Add(it.GetDat()[3]);
+		  edgesV.Add(it.GetDat()[4]);
+		  if (it.GetDat()[0] != -1)
+		    edges.AddDat(edges.Len(),edgesV);
+		  }
+		  edges_.Clr();
+	  }
+
+	  sizesCont.AddDat(br,prev_sizes);
+	  cCont.AddDat(br,prev);
+	  br++;
+
+	  // WORK - END
+
+  } while (FindNextFile(hFind, &data));
+  FindClose(hFind);
+  }
+}
+
+void CmtyEvolutionFolderBatch(TStr InFNm, TIntIntVH& sizesContV, TIntIntVH& cContV, TIntIntVH& edges, double alpha, double beta, int CmtyAlg) {
+	TIntIntHH sizesCont;
+	TIntIntHH cCont;
+	CmtyEvolutionFolderBatch(InFNm,sizesCont, cCont, edges, alpha, beta, CmtyAlg);
+
+	TIntV uniqueId;
+	for (int i=0; i < cCont.Len(); i++){
+		for (THashKeyDatI<TInt, TInt> it = cCont[i].BegI();  !it.IsEnd(); it++){
+			if (!uniqueId.IsIn(it.GetKey()))
+				uniqueId.Add(it.GetKey());
+		}
+	}
+
+	for (int j=0; j<uniqueId.Len(); j++)
+	{
+		TIntV cV;
+		for (int i=0; i<cCont.Len(); i++)
+		{
+			if (cCont[i].IsKey(uniqueId[j]))
+				cV.Add(cCont[i].GetDat(uniqueId[j]));
+			else
+				cV.Add(-1);
+		}
+		cContV.AddDat(uniqueId[j],cV);
+	}
+
+	TIntV uniqueC;
+	for (int i=0; i < sizesCont.Len(); i++){
+		for (THashKeyDatI<TInt, TInt> it = sizesCont[i].BegI();  !it.IsEnd(); it++){
+			if (!uniqueC.IsIn(it.GetKey()))
+				uniqueC.Add(it.GetKey());
+		}
+	}
+
+	for (int j=0; j<uniqueC.Len(); j++)
+	{
+		TIntV cV;
+		for (int i=0; i<sizesCont.Len(); i++)
+		{
+			if (sizesCont[i].IsKey(uniqueC[j]))
+				cV.Add(sizesCont[i].GetDat(uniqueC[j]));
+			else
+				cV.Add(0);
+		}
+		sizesContV.AddDat(uniqueC[j], cV);
+	}
+
+}
+
+void CmtyEvolutionFileBatch(TStr InFNm, TIntIntVH& sizesContV, TIntIntVH& cContV, TIntIntVH& edges, double alpha, double beta, int CmtyAlg) {
+	TIntIntHH sizesCont;
+	TIntIntHH cCont;
+	CmtyEvolutionFileBatch(InFNm,sizesCont, cCont, edges, alpha, beta, CmtyAlg);
+
+	TIntV uniqueId;
+	for (int i=0; i < cCont.Len(); i++){
+		for (THashKeyDatI<TInt, TInt> it = cCont[i].BegI();  !it.IsEnd(); it++){
+			if (!uniqueId.IsIn(it.GetKey()))
+				uniqueId.Add(it.GetKey());
+		}
+	}
+
+	for (int j=0; j<uniqueId.Len(); j++)
+	{
+		TIntV cV;
+		for (int i=0; i<cCont.Len(); i++)
+		{
+			if (cCont[i].IsKey(uniqueId[j]))
+				cV.Add(cCont[i].GetDat(uniqueId[j]));
+			else
+				cV.Add(-1);
+		}
+		cContV.AddDat(uniqueId[j],cV);
+	}
+
+	TIntV uniqueC;
+	for (int i=0; i < sizesCont.Len(); i++){
+		for (THashKeyDatI<TInt, TInt> it = sizesCont[i].BegI();  !it.IsEnd(); it++){
+			if (!uniqueC.IsIn(it.GetKey()))
+				uniqueC.Add(it.GetKey());
+		}
+	}
+
+	for (int j=0; j<uniqueC.Len(); j++)
+	{
+		TIntV cV;
+		for (int i=0; i<sizesCont.Len(); i++)
+		{
+			if (sizesCont[i].IsKey(uniqueC[j]))
+				cV.Add(sizesCont[i].GetDat(uniqueC[j]));
+			else
+				cV.Add(0);
+		}
+		sizesContV.AddDat(uniqueC[j], cV);
+	}
+
+}
+
+void CmtyEvolutionFileBatch(TStr InFNm, TIntIntHH& sizesCont, TIntIntHH& cCont, TIntIntVH& edges, double alpha, double beta, int CmtyAlg) {
+
+
+  // reading folder with networks and calculating core/periphery
+    int br=0;
+	TIntIntH prev;
+	TIntH prev_sizes;
+
+	TSsParser Ss(InFNm, ssfWhiteSep, true, false, true);
+	Ss.Next();
+	int internal_year_counter = 0;
+	// variable for delimiter between networks
+	TStr Marker;
+	// defining variables for node ids and starting year
+	int SrcNId, DstNId, t=1970;
+
+	// temporal container for edges
+	TIntIntVH edges_;
+	
+	while (!Ss.Eof()) {
+	  
+	  //printf("%i\n", t);
+	  Marker = Ss.GetLnStr();
+	  // get the year from the network seperator
+	  t = Marker.GetSubStr(1,4).GetInt();
+
+	  if (Marker.GetCh(0) == '#'){
+
+	  Ss.Next();
+	  PUNGraph Graph = PUNGraph::TObj::New();
+	  do{
+	 	if (! Ss.GetInt(0, SrcNId) || ! Ss.GetInt(1, DstNId)) {
+			if (!Ss.Eof()){ 
+				Ss.Next(); 
+				if (!Ss.Eof()) 
+					Marker = Ss.GetLnStr();
+			}
+			continue; 
+	    }
+	    if (! Graph->IsNode(SrcNId)) { Graph->AddNode(SrcNId); }
+	    if (! Graph->IsNode(DstNId)) { Graph->AddNode(DstNId); }
+	    Graph->AddEdge(SrcNId, DstNId);
+	    Ss.Next();
+	    if (!Ss.Eof())
+	    Marker = Ss.GetLnStr();
+      }while(Marker.GetCh(0)!='#' && !Ss.Eof());
+
+	  
+	  if (Graph->GetNodes()>0) {
+	  // WORK
+	  
+	  TSnap::DelSelfEdges(Graph);
+      TCnComV CmtyV;
+      double Q = 0.0;
+      TStr CmtyAlgStr;
+      if (CmtyAlg == 1) {
+        CmtyAlgStr = "Girvan-Newman";
+        Q = TSnap::CommunityGirvanNewman(Graph, CmtyV); }
+      else if (CmtyAlg == 2) {
+        CmtyAlgStr = "Clauset-Newman-Moore";
+        Q = TSnap::CommunityCNM(Graph, CmtyV); }
+      else if (CmtyAlg == 3) {
+        CmtyAlgStr = "Infomap";
+        Q = TSnap::Infomap(Graph, CmtyV); }
+      else { Fail; }
+
+	  TIntIntHH distCont;
+
+	  if (br == 0) {
+		  prev.Clr();
+		  int size = 0;
+		  for (int c = 0; c < CmtyV.Len(); c++) {
+            for (int i = 0; i < CmtyV[c].Len(); i++){
+				prev.AddDat(CmtyV[c][i].Val,c);
+			}
+			int s = CmtyV[c].Len();
+			prev_sizes.AddDat(c,CmtyV[c].Len());
+          }
+	  }
+	  else {
+		
+		// containers for statistics
+		
+		//TIntFltHH stat1;
+		//TIntIntHH stat2;
+		TIntH dist;
+		TIntH map;
+
+		int first_new_c_id=-1;
+		
+		// getting first free id for a new community
+		for (THashKeyDatI<TInt, TInt> it = prev_sizes.BegI();  !it.IsEnd(); it++)
+			if (it.GetKey() > first_new_c_id)
+				first_new_c_id = it.GetKey();
+		if (CmtyV.Len()-1>first_new_c_id)
+			first_new_c_id = CmtyV.Len()-1;
+		first_new_c_id++;
+
+	    for (int c = 0; c < CmtyV.Len(); c++) {
+		 
+		  TIntV stat;
+		  TIntFltH statH1;
+		  TIntFltH statH2;
+		  
+		  // initialize distributions to 0
+		  for (THashKeyDatI<TInt, TInt> it = prev_sizes.BegI();  !it.IsEnd(); it++)
+			  dist.AddDat(it.GetKey(),0);
+		  //for new nodes
+		  dist.AddDat(-1,0);
+
+          for (int i = 0; i < CmtyV[c].Len(); i++) {
+			  int id = CmtyV[c][i].Val;
+			  int prev_comm=-1;
+			  if (prev.IsKey(id))
+				prev_comm = prev.GetDat(CmtyV[c][i].Val);
+			  stat.Add(prev_comm);
+			  int pre_val = dist.GetDat(prev_comm);
+			  dist.AddDat(prev_comm,pre_val+1);
+          }
+
+		  double sumstat2=0;
+		  for (THashKeyDatI<TInt, TInt> it = dist.BegI();  !it.IsEnd(); it++) {
+				
+			  int k = it.GetKey();
+			  int d = it.GetDat();
+			  if (d > 0){
+				  if (prev_sizes.IsKey(it.GetKey())){
+				
+					double stat1_ = (double)d/(double)prev_sizes.GetDat(k);
+					statH1.AddDat(k, stat1_);
+				  }
+				  double stat2_ = (double)d/(double)CmtyV[c].Len();
+				  statH2.AddDat(k, stat2_);
+				  sumstat2 += stat2_;
+
+				  TIntV edge;
+				  edge.Add(k);
+				  edge.Add(c);
+				  edge.Add(d);
+				  edge.Add(br-1);
+				  edge.Add(br);
+				  edges_.AddDat(edges_.Len()+1,edge);
+			  }
+
+			  // adding edges between two communities in two neighbouring time points;
+			  
+
+			  if (sumstat2 > 0.98) break;
+		  }
+
+		  int n_of_c_greater_than_half=0;
+		  int id_of_c_greater_than_half=-1;
+		  TIntV ids_of_c_greater_than_half;
+		  
+		  for (THashKeyDatI<TInt, TFlt> it = statH1.BegI();  !it.IsEnd(); it++){
+			  if (it.GetDat()>alpha){
+				id_of_c_greater_than_half = it.GetKey();
+				ids_of_c_greater_than_half.Add(it.GetKey());
+				n_of_c_greater_than_half++;
+			  }
+		  }
+		  
+		  // if this community is build of majority of one previous community and the other parts of the community are fractions of other communities smaller than half, the new community gets its label 
+		  if (n_of_c_greater_than_half == 1){
+			  map.AddDat(c, id_of_c_greater_than_half);
+		  }
+		  else{
+			  int h2part_id = -2;
+			  for (int i=0; i<ids_of_c_greater_than_half.Len(); i++){
+				  double H2 = statH2.GetDat(ids_of_c_greater_than_half[i]);
+				  if (H2>beta){
+					h2part_id = ids_of_c_greater_than_half[i];
+				  }
+			  }
+			  if (h2part_id!=-2)
+				  map.AddDat(c, h2part_id);
+			  else{
+				  map.AddDat(c,first_new_c_id);
+				  first_new_c_id++;
+			  }
+		  }
+
+		  distCont.AddDat(c,dist);
+
+		  //stat1.AddDat(c,statH1);
+		  //stat2.AddDat(c,statH2);
+		
+		}
+
+		
+		prev.Clr();
+		prev_sizes.Clr();
+		for (int c = 0; c < CmtyV.Len(); c++){
+            for (int i = 0; i < CmtyV[c].Len(); i++){
+				prev.AddDat(CmtyV[c][i].Val,map.GetDat(c));
+			}
+			int s = CmtyV[c].Len();
+			prev_sizes.AddDat(map.GetDat(c),CmtyV[c].Len());
+		}
+
+		// filing the edges container - the key thing is the map(c)
+		for (THashKeyDatI<TInt, TIntV> it = edges_.BegI();  !it.IsEnd(); it++){
+			TIntV edgesV;
+			int a = it.GetDat()[0];
+			int b = it.GetDat()[1];
+			int v = it.GetDat()[2];
+			int d = it.GetDat()[3];
+			int e = it.GetDat()[4];
+			edgesV.Add(map.GetDat(b));
+			edgesV.Add(a);
+			edgesV.Add(v);
+			edgesV.Add(d);
+			edgesV.Add(e);
+			if (a != -1)
+				edges.AddDat(edges.Len(),edgesV);
+		}
+		edges_.Clr();
+
+		
+	  }
+
+	  sizesCont.AddDat(br,prev_sizes);
+	  cCont.AddDat(br,prev);
+	  br++;
+	  // WORK - END
+	  }
+	}
+	else Ss.Next();
+	}
+  
+}
+
+void CmtyEvolutionJson(TStr& Json, TIntIntVH& sizesContV, TIntIntVH& cContV, TIntIntVH& edges){
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // This function creates a JSON string with communities and edges for community evolution visualization using D3.js
+  ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+ 
+  // writing json label for edges
+  Json.InsStr(Json.Len(),"{\n\"edges\":[\n");
+  
+  TInt br=0;
+  // iterating hash of vector of edges and writing into string 
+  for (THashKeyDatI<TInt, TIntV> it = edges.BegI();  !it.IsEnd(); it++)
+  {
+    // first node
+	TInt n1 = it.GetDat()[1];
+	// second node
+	TInt n2 = it.GetDat()[0];
+	// edge weight
+	TInt w = it.GetDat()[2];
+	// start time point
+	TInt t0 = it.GetDat()[3];
+	// end time point
+	TInt t1 = it.GetDat()[4];
+
+	if (br>0)
+		Json.InsStr(Json.Len(),",");
+
+	// writing to string
+	Json.InsStr(Json.Len(),"{\"n1\":"); Json.InsStr(Json.Len(),n1.GetStr()); 
+	Json.InsStr(Json.Len(),", \"n2\":"); Json.InsStr(Json.Len(),n2.GetStr());
+	Json.InsStr(Json.Len(),", \"w\":"); Json.InsStr(Json.Len(),w.GetStr());
+	Json.InsStr(Json.Len(),", \"t0\":"); Json.InsStr(Json.Len(),t0.GetStr());
+	Json.InsStr(Json.Len(),", \"t1\":"); Json.InsStr(Json.Len(),t1.GetStr());
+	Json.InsStr(Json.Len()," }\n");
+	br++;
+  }
+
+  // json label for communities
+  Json.InsStr(Json.Len(),"],\n\"communities\":[\n");
+
+  br=0;
+  // printing communities into json file 
+  for (int i=0; i < sizesContV[0].Len(); i++)
+  {
+	  for (THashKeyDatI<TInt, TIntV> it = sizesContV.BegI();  !it.IsEnd(); it++)
+	  {
+		  // id of community
+		  TInt id = it.GetKey();
+		  // community size
+		  TInt size = it.GetDat()[i];
+		  // time
+		  TInt j = i;
+		  
+		  // if the community has size greater than 0, output it to json string
+		  if (size > 0) {
+			if(br>0)
+			  Json.InsStr(Json.Len(),",");
+
+			TInt size = it.GetDat()[i];
+			Json.InsStr(Json.Len(),"{\"id\":"); Json.InsStr(Json.Len(),id.GetStr()); 
+			Json.InsStr(Json.Len(),", \"size\":"); Json.InsStr(Json.Len(),size.GetStr());
+			Json.InsStr(Json.Len(),", \"t\":"); Json.InsStr(Json.Len(),j.GetStr());
+			Json.InsStr(Json.Len()," }\n");
+
+			br++;
+		  }
+	  }
+  }
+
+  // printing communities into json file - alternative ordering
+  /*
+  for (THashKeyDatI<TInt, TIntV> it = sizesContV.BegI();  !it.IsEnd(); it++)
+  {
+	  TInt id = it.GetKey();
+	  int len = it.GetDat().Len();
+	  for (int i=0; i < it.GetDat().Len(); i++)
+	  {	
+		  TInt size = it.GetDat()[i];
+		  TInt j = i;
+		  if (size > 0) {
+
+			if(br>0)
+			  Json.InsStr(Json.Len(),",");
+
+			TInt size = it.GetDat()[i];
+
+			Json.InsStr(Json.Len(),"{\"id\":"); Json.InsStr(Json.Len(),id.GetStr()); 
+			Json.InsStr(Json.Len(),", \"size\":"); Json.InsStr(Json.Len(),size.GetStr());
+			Json.InsStr(Json.Len(),", \"t\":"); Json.InsStr(Json.Len(),j.GetStr());
+			Json.InsStr(Json.Len()," }\n");
+
+			br++;
+
+		  }
+
+	  }
+  }
+  */
+
+  Json.InsStr(Json.Len(),"]\n}");
+
+}
+
 namespace TSnapDetail {
 /// Clauset-Newman-Moore community detection method.
 /// At every step two communities that contribute maximum positive value to global modularity are merged.

@@ -5,6 +5,7 @@
     <None Include="cobiss1.txt" />
     <None Include="gc2.txt" />
     <None Include="sicris.txt" />
+    <None Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="gcentrality.cpp" />

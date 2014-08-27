@@ -53,4 +53,16 @@ TVec<PNGraph> LoadDyNetGraphV(const TStr& FNm) {
   return GraphV;
 }
 
+
+
+bool IsinGroup(int *GNodes, int node){
+	bool Isin = false;
+	for(int index = 0; GNodes[index] != 0; ++index){ //for(int *value = myArray; *value != 0; ++value)
+		int val = GNodes[index];
+		if (GNodes[index] == node)
+			Isin = true;
+	}
+	return Isin;
+}
+
 }; // namespace TSnap

@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
   Env.PrepArgs(TStr::Fmt("GraphInfo. build: %s, %s. Time: %s", __TIME__, __DATE__, TExeTm::GetCurTm()));
   TExeTm ExeTm;
   Try
-  const TStr InFNm = Env.GetIfArgPrefixStr("-i:", "graph.txt", "Input graph (one edge per line, tab/space separated)");
+  const TStr InFNm = Env.GetIfArgPrefixStr("-i:", "C:\\Users\\mario\\Desktop\\graph1914.txt", "Input graph (one edge per line, tab/space separated)");
   const TBool IsDir = Env.GetIfArgPrefixBool("-d:", true, "Directed graph");
   const TStr OutFNm = Env.GetIfArgPrefixStr("-o:", "graph", "Output file prefix");
   const TStr Desc = Env.GetIfArgPrefixStr("-t:", "", "Title (description)");
@@ -53,9 +53,10 @@ int main(int argc, char* argv[]) {
   PlotClustCf = Plot.SearchCh('C') != -1;
   PlotSVal = Plot.SearchCh('v') != -1;
   PlotSVec = Plot.SearchCh('V') != -1;
-  if (Env.IsEndOfRun()) { return 0; }
+  //if (Env.IsEndOfRun()) { return 0; }
   //PNGraph G = TGGen<PNGraph>::GenRMat(1000, 3000, 0.40, 0.25, 0.2);
   //G->SaveEdgeList("graph.txt", "RMat graph (a:0.40, b:0.25, c:0.20)");
+  //Graph = TSnap::LoadEdgeList<PUNGraph>(InFNmGraph, false);
   printf("Loading...");
   PNGraph NGraph;
   PUNGraph UNGraph;
