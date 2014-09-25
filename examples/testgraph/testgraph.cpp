@@ -15,6 +15,8 @@ int main(int argc, char* argv[]) {
     G->AddNode(); // if no parameter is given, edge ids are 0,1,...,9
   }
   G->AddEdge(0, 1);
+
+  //G->BegEI().GetSrcNId()
   for (int e = 0; e < 10; e++) {
     const int NId1 = G->GetRndNId();
     const int NId2 = G->GetRndNId();
