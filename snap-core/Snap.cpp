@@ -25,7 +25,6 @@
 #include "centr.cpp"         // centrality measures
 #include "cmty.cpp"          // community detection algorithms
 
-
 // graph generators
 #include "ggen.cpp"          // graph generators (preferential attachment, small-world, ...)
 #include "ff.cpp"            // forest fire graph generator
